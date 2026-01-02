@@ -7,11 +7,11 @@ from scipy.optimize import minimize
 
 g = 9.81
 
-# вычисление силы Архимеда (пускай будет)
+# вычисление силы Архимеда
 def compute_archimedes_force(weight):
     return weight * g
 
-# вычисление коэффициента а (пускай будет)
+# вычисление коэффициента а
 def compute_a(archimedes_force, weight):
     return 1 - archimedes_force / (weight * g)
 
@@ -56,16 +56,8 @@ def solver(h = 0.01, T = 10, control_vector = [1, 1]):
         V_prev = V[i - 1]
         theta_prev = theta[i - 1]
 
-        # A_x = A * sin(theta_prev)
-        # A_y = A * cos(theta_prev)
-
-        # nx = (R - A_x) / (m * g)
-        # ny = (Y + A_y) / (m * g)
-        
-        V[i] = V_prev + h * (a * g * (nx - sin(theta_prev)))
-        
+        V[i] = V_prev + h * (a * g * (nx - sin(theta_prev)))    
         theta[i] = theta_prev + h * (a * g/V_prev * (ny - cos(theta_prev)))
-            
         x[i] = x[i - 1] + h * (V_prev * cos(theta_prev)) # угол рыскания = 0 |=> cos(фи) = cos(0) = 1
         y[i] = y[i - 1] + h * (V_prev * sin(theta_prev))
         
@@ -94,6 +86,7 @@ def fixed_control():
     for i in range(len(list_of_values)):
         main_title, x_title, y_title = titles_for_graphics[i]
         print_graphics(x_axis, list_of_values[i], main_title, x_title, y_title)
+    print_graphics(list_of_values[2], list_of_values[3], 'График зависимости y от x', 'x', 'y')
 
 # second step
 def optimal_control():
@@ -164,13 +157,13 @@ def integrate_optimal_system(p0, T, dt=0.05):
         nx_ideal = k**2 * pV * a * g
         ny_ideal = k**2 * ptheta * a * g / V_safe
         
-        # 2. Применяем ограничения
-        nx = np.clip(nx_ideal, -1.0, 1.0)
-        ny = np.clip(ny_ideal, -3.0, 3.0)
+        # # 2. Применяем ограничения
+        # nx = np.clip(nx_ideal, -1.0, 1.0)
+        # ny = np.clip(ny_ideal, -3.0, 3.0)
         
         # 3. Вычисляем производные фазовых переменных
-        dV = a * g * (nx - np.sin(theta))
-        dtheta = a * g / V_safe * (ny - np.cos(theta))
+        dV = a * g * (nx_ideal - np.sin(theta))
+        dtheta = a * g / V_safe * (ny_ideal - np.cos(theta))
         dx = V * np.cos(theta)
         dy = V * np.sin(theta)
         
@@ -180,7 +173,7 @@ def integrate_optimal_system(p0, T, dt=0.05):
         
         # p_V производная
         dH_dV = px * np.cos(theta) + py * np.sin(theta) - \
-                ptheta * (a * g / (V_safe**2)) * (ny - np.cos(theta))
+                ptheta * (a * g / (V_safe**2)) * (ny_ideal - np.cos(theta))
         dpV = -dH_dV
         
         # p_theta производная
@@ -189,7 +182,7 @@ def integrate_optimal_system(p0, T, dt=0.05):
                     px * V * (-np.sin(theta)) + py * V * np.cos(theta)
         dptheta = -dH_dtheta
         
-        return np.array([dV, dtheta, dx, dy, dpV, dptheta, dpx, dpy]), (nx, ny)
+        return np.array([dV, dtheta, dx, dy, dpV, dptheta, dpx, dpy]), (nx_ideal, ny_ideal)
     
     # Интегрирование методом Эйлера (можно заменить на РК4)
     for i in range(n_steps - 1):
@@ -204,9 +197,6 @@ def integrate_optimal_system(p0, T, dt=0.05):
     return time, state, controls
 
 def simplex_optimization(x_target, y_target, T):
-    """
-    Находит оптимальные начальные условия p0 с помощью симплекс-метода
-    """
     # Целевая функция для минимизации
     def cost_function(p0):
         # Интегрируем систему с текущими p0
@@ -228,8 +218,8 @@ def simplex_optimization(x_target, y_target, T):
     result = minimize(cost_function, p0_guess, 
                      method='Nelder-Mead',
                      options={'maxiter': 1500, 
-                              'xatol': 1e-3,
-                              'fatol': 1e-3,
+                              'xatol': 1e-4,
+                              'fatol': 1e-4,
                               'disp': True})
     
     return result.x, result.success
@@ -322,7 +312,7 @@ if __name__ == "__main__":
 
         # ====================ШАГ 1====================
 
-        #fixed_control()
+        fixed_control()
         
         # ====================ШАГ 2====================
         
